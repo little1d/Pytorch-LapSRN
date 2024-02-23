@@ -1,11 +1,3 @@
-#!/usr/bin/env python2
-# -*- coding: utf-8 -*-
-"""
-Created on Sat May  6 18:18:37 2017
-
-@author: ldy
-"""
-
 from __future__ import print_function
 import argparse
 from math import log10
@@ -20,7 +12,7 @@ from torch.utils.data import DataLoader
 from model import LasSRN
 from data import get_training_set, get_test_set
 
-# Training settings 
+# Training settings
 parser = argparse.ArgumentParser(description='PyTorch LapSRN')
 parser.add_argument('--batchSize', type=int, default=64, help='training batch size')
 parser.add_argument('--testBatchSize', type=int, default=10, help='testing batch size')
@@ -50,50 +42,47 @@ testing_data_loader = DataLoader(dataset=test_set, num_workers=opt.threads, batc
 
 
 def CharbonnierLoss(predict, target):
-    return torch.mean(torch.sqrt(torch.pow((predict-target), 2) + 1e-6)) # epsilon=1e-3
-    
+    return torch.mean(torch.sqrt(torch.pow((predict - target), 2) + 1e-6))  # epsilon=1e-3
+
 
 print('===> Building model')
 model = LasSRN()
 model_out_path = "model/model_epoch_{}.pth".format(0)
-torch.save(model, model_out_path)
-#criterion = CharbonnierLoss()
+torch.save(model.state_dict(), model_out_path)  # 只保存模型参数
+# criterion = CharbonnierLoss()
 criterion = nn.MSELoss()
-print (model)
+print(model)
 if cuda:
     model = model.cuda()
     criterion = criterion.cuda()
 
 
-
-
-
 def train(epoch):
-    
-    for i in xrange(250):
+    for i in range(250):
         epoch_loss = 0
         for iteration, batch in enumerate(training_data_loader, 1):
-            LR, HR_2_target, HR_4_target, HR_8_target = Variable(batch[0]), Variable(batch[1]), Variable(batch[2]), Variable(batch[3])
-            
+            LR, HR_2_target, HR_4_target, HR_8_target = Variable(batch[0]), Variable(batch[1]), Variable(
+                batch[2]), Variable(batch[3])
+
             if cuda:
                 LR = LR.cuda()
                 HR_2_target = HR_2_target.cuda()
                 HR_4_target = HR_4_target.cuda()
                 HR_8_target = HR_8_target.cuda()
-    
+
             optimizer.zero_grad()
             HR_2, HR_4, HR_8 = model(LR)
-            
+
             loss1 = CharbonnierLoss(HR_2, HR_2_target)
             loss2 = CharbonnierLoss(HR_4, HR_4_target)
             loss3 = CharbonnierLoss(HR_8, HR_8_target)
-            loss = loss1+loss2+loss3   
-            
-            epoch_loss += loss.data[0]
+            loss = loss1 + loss2 + loss3
+
+            epoch_loss += loss.item()  # 使用loss.item()获取标量值
             loss.backward()
             optimizer.step()
-    
-            #print("===> Epoch[{}]({}/{}): Loss: {:.4f}".format(epoch, iteration, len(training_data_loader), loss.data[0]))
+
+            # print("===> Epoch[{}]({}/{}): Loss: {:.4f}".format(epoch, iteration, len(training_data_loader), loss.item()))
         print("===> Epoch {}, Loop{}: Avg. Loss: {:.4f}".format(epoch, i, epoch_loss / len(training_data_loader)))
 
 
@@ -102,8 +91,9 @@ def test():
     avg_psnr2 = 0
     avg_psnr3 = 0
     for batch in testing_data_loader:
-        LR, HR_2_target, HR_4_target, HR_8_target = Variable(batch[0]), Variable(batch[1]), Variable(batch[2]), Variable(batch[3])
-        
+        LR, HR_2_target, HR_4_target, HR_8_target = Variable(batch[0]), Variable(batch[1]), Variable(
+            batch[2]), Variable(batch[3])
+
         if cuda:
             LR = LR.cuda()
             HR_2_target = HR_2_target.cuda()
@@ -113,10 +103,10 @@ def test():
         HR_2, HR_4, HR_8 = model(LR)
         mse1 = criterion(HR_2, HR_2_target)
         mse2 = criterion(HR_4, HR_4_target)
-        mse3 = criterion(HR_8, HR_8_target)        
-        psnr1 = 10 * log10(1 / mse1.data[0])
-        psnr2 = 10 * log10(1 / mse2.data[0])
-        psnr3 = 10 * log10(1 / mse3.data[0])
+        mse3 = criterion(HR_8, HR_8_target)
+        psnr1 = 10 * log10(1 / mse1.item())  # 使用mse.item()获取标量值
+        psnr2 = 10 * log10(1 / mse2.item())
+        psnr3 = 10 * log10(1 / mse3.item())
         avg_psnr1 += psnr1
         avg_psnr2 += psnr2
         avg_psnr3 += psnr3
@@ -129,15 +119,16 @@ def checkpoint(epoch):
     if not exists(opt.checkpoint):
         makedirs(opt.checkpoint)
     model_out_path = "model/model_epoch_{}.pth".format(epoch)
-    torch.save(model, model_out_path)
+    torch.save(model.state_dict(), model_out_path)  # 只保存模型参数
     print("Checkpoint saved to {}".format(model_out_path))
 
-lr=opt.lr
-for epoch in range(1, opt.nEpochs + 1):
 
-    optimizer = optim.SGD(model.parameters(), lr=opt.lr, momentum=0.9, weight_decay=1e-5)
-    train(epoch)
-    test()
-    if epoch % 10 ==0:
-        lr = lr/2
-        checkpoint(epoch)
+lr = opt.lr
+if __name__ == '__main__':
+    for epoch in range(1, opt.nEpochs + 1):
+        optimizer = optim.SGD(model.parameters(), lr=opt.lr, momentum=0.9, weight_decay=1e-5)
+        train(epoch)
+        test()
+        if epoch % 10 == 0:
+            lr = lr / 2
+            checkpoint(epoch)

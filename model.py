@@ -34,8 +34,8 @@ def bilinear_upsample_weights(filter_size, weights):
     
     upsample_kernel = upsample_filt(filter_size)
     
-    for i in xrange(f_out):
-        for j in xrange(f_in):
+    for i in range(f_out):
+        for j in range(f_in):
             weights[i, j, :, :] = upsample_kernel
     return torch.Tensor(weights)        
 

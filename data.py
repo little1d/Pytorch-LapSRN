@@ -10,7 +10,7 @@ from os.path import exists, join, basename
 from os import makedirs, remove
 from six.moves import urllib
 import tarfile
-from torchvision.transforms import Compose, CenterCrop, ToTensor, Scale, RandomCrop, RandomHorizontalFlip
+from torchvision.transforms import Compose, CenterCrop, ToTensor, Resize, RandomCrop, RandomHorizontalFlip
 
 from dataset import DatasetFromFolder
 
@@ -45,19 +45,19 @@ def download_bsd300(dest="dataset"):
 
 def LR_transform(crop_size):
     return Compose([
-        Scale(crop_size//8),
+        Resize(crop_size//8),
         ToTensor(),
     ])
 
 def HR_2_transform(crop_size):
     return Compose([
-        Scale(crop_size//4),
+        Resize(crop_size//4),
         ToTensor(),
     ])
 
 def HR_4_transform(crop_size):
     return Compose([
-        Scale(crop_size//2),
+        Resize(crop_size//2),
         ToTensor(),
     ])
 
